@@ -5,10 +5,13 @@ This is officially my OWN very first plugin for CS 1.6. It is a "simple" plugin 
 - Just download the plugin and upload the .amxx file to your plugins folder on your server (or you can of course compile the .sma file and then upload the compilated .amxx file to your server).
 
 # CVARs
-`amx_changedmg <value>`
+`amx_changedmg <value>` (Default: 200)
 
 # Notes
 - After installing the plugin on the server, a new .cfg file `melee_dmg_changer.cfg` will be created in the `/cstrike/addons/amxmodx/data` folder. Your SteamID, the name of the cvar, and its value will be written here. The values are saved, so it is not necessary to enter the command again each time.
+- If you wish to change the default value (200), simply open the .sma script and edit this line: `g_pCvarDmgDefault = register_cvar("amx_changedmg", "200");` specifically the ending number, which defines the default value.
 
 # Support
 If you having any issues please feel free to write your issue to the issue section :) .
+
+
