@@ -5,8 +5,10 @@
 #include <cstrike>
 
 #define PLUGIN_NAME    "Melee Damage Changer"
-#define PLUGIN_VERSION "1.0"
+#define PLUGIN_VERSION "1.1"
 #define PLUGIN_AUTHOR  "sakulmore"
+
+#define REQUIRED_FLAG ADMIN_LEVEL_H
 
 new g_szCfgPath[256];
 new g_pCvarDmgDefault;
@@ -15,7 +17,9 @@ new g_PlayerDmg[33];
 public plugin_init()
 {
     register_plugin(PLUGIN_NAME, PLUGIN_VERSION, PLUGIN_AUTHOR);
-    g_pCvarDmgDefault = register_cvar("amx_changedmg", "200");
+
+    g_pCvarDmgDefault = register_cvar("amx_changedmg", "8");
+
     register_clcmd("amx_changedmg", "Cmd_ClientSetDamage");
 
     new datadir[128];
@@ -27,7 +31,12 @@ public plugin_init()
     RegisterHam(Ham_TakeDamage, "player", "OnPlayerTakeDamage_Pre", 0);
 }
 
-public client_authorized(id)
+public client_putinserver(id)
+{
+    set_task(0.1, "InitPlayerDmg", id);
+}
+
+public InitPlayerDmg(id)
 {
     g_PlayerDmg[id] = 0;
 
@@ -44,6 +53,13 @@ public client_authorized(id)
     if (LoadPlayerValue(auth, "amx_changedmg", value) && value > 0)
     {
         g_PlayerDmg[id] = value;
+    }
+    else
+    {
+        new def = get_pcvar_num(g_pCvarDmgDefault);
+        if (def <= 0) def = 8;
+        g_PlayerDmg[id] = def;
+        SaveOrUpdatePlayerValue(auth, "amx_changedmg", def);
     }
 }
 
@@ -64,9 +80,8 @@ public OnPlayerTakeDamage_Pre(victim, inflictor, attacker, Float:damage, damageb
     if (iDmg <= 0)
     {
         iDmg = get_pcvar_num(g_pCvarDmgDefault);
+        if (iDmg <= 0) iDmg = 8;
     }
-    if (iDmg <= 0)
-        return HAM_IGNORED;
 
     SetHamParamFloat(4, float(iDmg));
     return HAM_HANDLED;
@@ -76,6 +91,12 @@ public Cmd_ClientSetDamage(id)
 {
     if (!is_user_connected(id))
         return PLUGIN_HANDLED;
+
+    if ( !(get_user_flags(id) & REQUIRED_FLAG) )
+    {
+        client_print(id, print_chat, "[DMG Changer] You don't have access to use this!");
+        return PLUGIN_HANDLED;
+    }
 
     new arg[32];
     read_argv(1, arg, charsmax(arg));
@@ -92,6 +113,7 @@ public Cmd_ClientSetDamage(id)
     if (!arg[0])
     {
         new def = get_pcvar_num(g_pCvarDmgDefault);
+        if (def <= 0) def = 8;
         new cur = g_PlayerDmg[id] > 0 ? g_PlayerDmg[id] : def;
         client_print(id, print_chat, "[DMG Changer] Your value: %d (default: %d). Change by: amx_changedmg <number>", cur, def);
         return PLUGIN_HANDLED;
@@ -100,15 +122,14 @@ public Cmd_ClientSetDamage(id)
     new val = str_to_num(arg);
     if (val <= 0)
     {
-        client_print(id, print_chat, "[DMG Changer] Invalid value. Enter a positive number (e.g., 200).");
+        client_print(id, print_chat, "[DMG Changer] Invalid value. Enter a positive number (e.g., 8).");
         return PLUGIN_HANDLED;
     }
 
     g_PlayerDmg[id] = val;
-
     SaveOrUpdatePlayerValue(auth, "amx_changedmg", val);
 
-    client_print(id, print_chat, "[DMG Changer] Setten: %d. (saved for %s)", val, auth);
+    client_print(id, print_chat, "[DMG Changer] Set: %d. (saved for %s)", val, auth);
     return PLUGIN_HANDLED;
 }
 
@@ -141,7 +162,7 @@ EnsureConfigFileExists()
         "; Example: %c%s%c %c%s%c %c%d%c%c",
         34, "STEAM_0:1:23456789", 34,
         34, "amx_changedmg", 34,
-        34, 200, 34,
+        34, 8, 34,
         10
     );
     fputs(fp, line);
@@ -242,7 +263,7 @@ SaveOrUpdatePlayerValue(const steamid[], const key[], value)
             "; Example: %c%s%c %c%s%c %c%d%c%c",
             34, "STEAM_0:1:23456789", 34,
             34, "amx_changedmg", 34,
-            34, 200, 34,
+            34, 8, 34,
             10
         );
         fputs(fpw, line);
