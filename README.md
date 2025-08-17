@@ -4,6 +4,10 @@ This is officially my OWN very first plugin for CS 1.6. It is a "simple" plugin 
 # Installation
 - Just download the plugin and upload the .amxx file to your plugins folder on your server (or you can of course compile the .sma file and then upload the compilated .amxx file to your server).
 
+# Requirements
+- AMX Mod X 1.10
+- Module `cstrike_amxx_i386.so`
+
 # CVARs
 `amx_changedmg <value>` (Default: 200)
 
@@ -13,5 +17,3 @@ This is officially my OWN very first plugin for CS 1.6. It is a "simple" plugin 
 
 # Support
 If you having any issues please feel free to write your issue to the issue section :) .
-
-
