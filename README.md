@@ -3,6 +3,7 @@ This is officially my OWN very first plugin for CS 1.6. It is a "simple" plugin 
 
 # Installation
 - Just download the plugin and upload the .amxx file to your plugins folder on your server (or you can of course compile the .sma file and then upload the compilated .amxx file to your server).
+- Then write the plugin name (with .amxx) to `/cstrike/addons/amxmodx/configs/plugins.ini`.
 
 # Requirements
 - AMX Mod X 1.10
@@ -19,4 +20,5 @@ The command is protected by an Admin Flag. To change the Admin Flag, simply edit
 
 # Support
 If you having any issues please feel free to write your issue to the issue section :) .
+
 
