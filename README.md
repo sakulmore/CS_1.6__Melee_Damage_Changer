@@ -21,4 +21,5 @@ The command is protected by an Admin Flag. To change the Admin Flag, simply edit
 # Support
 If you having any issues please feel free to write your issue to the issue section :) .
 
-
+# Showcases
+https://youtu.be/tjFB44Qvx3I
