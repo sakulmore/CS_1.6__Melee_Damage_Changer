@@ -5,7 +5,7 @@
 #include <cstrike>
 
 #define PLUGIN_NAME    "Melee Damage Changer"
-#define PLUGIN_VERSION "1.1"
+#define PLUGIN_VERSION "1.2"
 #define PLUGIN_AUTHOR  "sakulmore"
 
 #define REQUIRED_FLAG ADMIN_LEVEL_H
@@ -14,6 +14,8 @@ new g_szCfgPath[256];
 new g_pCvarDmgDefault;
 new g_PlayerDmg[33];
 
+new g_TargetForValue[33];
+
 public plugin_init()
 {
     register_plugin(PLUGIN_NAME, PLUGIN_VERSION, PLUGIN_AUTHOR);
@@ -21,6 +23,12 @@ public plugin_init()
     g_pCvarDmgDefault = register_cvar("amx_changedmg", "8");
 
     register_clcmd("amx_changedmg", "Cmd_ClientSetDamage");
+
+    register_clcmd("say /changedmg",      "Cmd_OpenChangeDmgMenu");
+    register_clcmd("say_team /changedmg", "Cmd_OpenChangeDmgMenu");
+    register_clcmd("/changedmg",          "Cmd_OpenChangeDmgMenu");
+
+    register_clcmd("Value", "Cmd_AdminEnteredValue");
 
     new datadir[128];
     get_datadir(datadir, charsmax(datadir));
@@ -39,6 +47,7 @@ public client_putinserver(id)
 public InitPlayerDmg(id)
 {
     g_PlayerDmg[id] = 0;
+    g_TargetForValue[id] = 0;
 
     if (!is_user_connected(id))
         return;
@@ -66,6 +75,7 @@ public InitPlayerDmg(id)
 public client_disconnected(id)
 {
     g_PlayerDmg[id] = 0;
+    g_TargetForValue[id] = 0;
 }
 
 public OnPlayerTakeDamage_Pre(victim, inflictor, attacker, Float:damage, damagebits)
@@ -130,6 +140,159 @@ public Cmd_ClientSetDamage(id)
     SaveOrUpdatePlayerValue(auth, "amx_changedmg", val);
 
     client_print(id, print_chat, "[DMG Changer] Set: %d. (saved for %s)", val, auth);
+    return PLUGIN_HANDLED;
+}
+
+public Cmd_OpenChangeDmgMenu(id)
+{
+    if (!is_user_connected(id))
+        return PLUGIN_HANDLED;
+
+    if ( !(get_user_flags(id) & REQUIRED_FLAG) )
+    {
+        client_print(id, print_chat, "[DMG Changer] You don't have access to use this!");
+        return PLUGIN_HANDLED;
+    }
+
+    ShowChangeDmgMenu(id);
+    return PLUGIN_HANDLED;
+}
+
+stock bool:IsRealSteamClient(id)
+{
+    if (!is_user_connected(id)) return false;
+
+    new auth[64];
+    get_user_authid(id, auth, charsmax(auth));
+    if (!auth[0]) return false;
+    if (equali(auth, "BOT")) return false;
+    if (equali(auth, "STEAM_ID_LAN")) return false;
+
+    return true;
+}
+
+ShowChangeDmgMenu(id)
+{
+    new menu = menu_create("Select Player", "ChangeDmgMenuHandler");
+    menu_setprop(menu, MPROP_PERPAGE, 5);
+
+    new name[32], info[8];
+
+    for (new i = 1; i <= 32; i++)
+    {
+        if (!is_user_connected(i))
+            continue;
+
+        if (!IsRealSteamClient(i))
+            continue;
+
+        get_user_name(i, name, charsmax(name));
+        num_to_str(i, info, charsmax(info));
+
+        menu_additem(menu, name, info);
+    }
+
+    if (menu_items(menu) == 0)
+    {
+        client_print(id, print_chat, "[DMG Changer] No eligible players online (bots and STEAM_ID_LAN are excluded).");
+        menu_destroy(menu);
+        return;
+    }
+
+    menu_display(id, menu, 0);
+}
+
+public ChangeDmgMenuHandler(id, menu, item)
+{
+    if (item == MENU_EXIT)
+    {
+        menu_destroy(menu);
+        return PLUGIN_HANDLED;
+    }
+
+    new info[8], name[64], access, callback;
+    menu_item_getinfo(menu, item, access, info, charsmax(info), name, charsmax(name), callback);
+
+    new target = str_to_num(info);
+
+    if (!is_user_connected(target))
+    {
+        client_print(id, print_chat, "[DMG Changer] Target is no longer connected.");
+        menu_destroy(menu);
+        return PLUGIN_HANDLED;
+    }
+
+    if (!IsRealSteamClient(target))
+    {
+        client_print(id, print_chat, "[DMG Changer] You cannot set damage for BOT/STEAM_ID_LAN players.");
+        menu_destroy(menu);
+        return PLUGIN_HANDLED;
+    }
+
+    g_TargetForValue[id] = target;
+
+    client_cmd(id, "messagemode Value");
+
+    menu_destroy(menu);
+    return PLUGIN_HANDLED;
+}
+
+public Cmd_AdminEnteredValue(id)
+{
+    if (!is_user_connected(id))
+        return PLUGIN_HANDLED;
+
+    if ( !(get_user_flags(id) & REQUIRED_FLAG) )
+    {
+        client_print(id, print_chat, "[DMG Changer] You don't have access to use this!");
+        return PLUGIN_HANDLED;
+    }
+
+    new target = g_TargetForValue[id];
+    if (target <= 0 || target > 32 || !is_user_connected(target))
+    {
+        client_print(id, print_chat, "[DMG Changer] No target selected or target disconnected.");
+        g_TargetForValue[id] = 0;
+        return PLUGIN_HANDLED;
+    }
+
+    if (!IsRealSteamClient(target))
+    {
+        client_print(id, print_chat, "[DMG Changer] You cannot set damage for BOT/STEAM_ID_LAN players.");
+        g_TargetForValue[id] = 0;
+        return PLUGIN_HANDLED;
+    }
+
+    new arg[32];
+    read_argv(1, arg, charsmax(arg));
+
+    if (!arg[0])
+    {
+        client_print(id, print_chat, "[DMG Changer] Please enter a number (e.g., 8).");
+        return PLUGIN_HANDLED;
+    }
+
+    new val = str_to_num(arg);
+    if (val <= 0)
+    {
+        client_print(id, print_chat, "[DMG Changer] Invalid value. Enter a positive number (e.g., 8).");
+        return PLUGIN_HANDLED;
+    }
+
+    g_PlayerDmg[target] = val;
+
+    new auth[64];
+    get_user_authid(target, auth, charsmax(auth));
+
+    new adminName[32], targetName[32];
+    get_user_name(id, adminName, charsmax(adminName));
+    get_user_name(target, targetName, charsmax(targetName));
+
+    SaveOrUpdatePlayerValue(auth, "amx_changedmg", val);
+    client_print(0, print_chat, "[DMG Changer] %s set %s's knife damage to %d.", adminName, targetName, val);
+
+    g_TargetForValue[id] = 0;
+
     return PLUGIN_HANDLED;
 }
 
