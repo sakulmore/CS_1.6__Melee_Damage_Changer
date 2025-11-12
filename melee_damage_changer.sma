@@ -26,7 +26,7 @@ public plugin_init()
 
     register_clcmd("say /changedmg",      "Cmd_OpenChangeDmgMenu");
     register_clcmd("say_team /changedmg", "Cmd_OpenChangeDmgMenu");
-    register_clcmd("/changedmg",          "Cmd_OpenChangeDmgMenu");
+    register_clcmd("changedmg",          "Cmd_OpenChangeDmgMenu");
 
     register_clcmd("Value", "Cmd_AdminEnteredValue");
 
