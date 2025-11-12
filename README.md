@@ -14,6 +14,9 @@ This is officially my OWN very first plugin for CS 1.6. It is a "simple" plugin 
 
 The command is protected by an Admin Flag. To change the Admin Flag, simply edit the line `#define REQUIRED_FLAG ADMIN_LEVEL_H` in the .sma file.
 
+# Commands
+`/changedmg` - Opens a menu where the admin can select a player. Then, it sets a new damage value for the chosen player, which is also automatically saved into the .cfg file.
+
 # Notes
 - After installing the plugin on the server, a new .cfg file `melee_dmg_changer.cfg` will be created in the `/cstrike/addons/amxmodx/data` folder. Your SteamID, the name of the cvar, and its value will be written here. The values are saved, so it is not necessary to enter the command again each time.
 - If you wish to change the default value (8), simply open the .sma script and edit this line: `g_pCvarDmgDefault = register_cvar("amx_changedmg", "8");` specifically the ending number, which defines the default value.
