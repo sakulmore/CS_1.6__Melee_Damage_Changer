@@ -1,5 +1,5 @@
 # CS 1.6 - Melee Damage Changer
-This is officially my OWN very first plugin for CS 1.6. It is a "simple" plugin that allows your players to change damage. It is "per-player" damage, meaning each player can set their own damage as needed. For now, it is a "fun" plugin, but with future updates (which I am planning), you will have more configuration options. For example, admin flags, etc...
+This is officially my OWN very first plugin for CS 1.6. It is a "simple" plugin that allows your players to change damage. It is "per-player" damage, meaning each player can set their own damage as needed.
 
 # Installation
 - Just download the plugin and upload the .amxx file to your plugins folder on your server (or you can of course compile the .sma file and then upload the compilated .amxx file to your server).
@@ -10,13 +10,14 @@ This is officially my OWN very first plugin for CS 1.6. It is a "simple" plugin 
 - Module `cstrike_amxx_i386.so`
 
 # CVARs
-`amx_changedmg <value>` (Default: 8)
+`amx_changedmg <value>` (Default: 0 (= original damage from the game))
+- Valid arguments: Any number (1>), or words that set the damage to the original from the game: orig, def, default, original, normal
 
 The command is protected by an Admin Flag. To change the Admin Flag, simply edit the line `#define REQUIRED_FLAG ADMIN_LEVEL_H` in the .sma file.
 
 # Commands
 `/changedmg` - Opens a menu where the admin can select a player. Then, it sets a new damage value for the chosen player, which is also automatically saved into the .cfg file.
-
+- Valid arguments: Any number (1>), or words that set the damage to the original from the game: orig, def, default, original, normal
 - Required Admin flag `ADMIN_LEVEL_H`
 
 # Notes
