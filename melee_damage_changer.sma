@@ -5,28 +5,53 @@
 #include <cstrike>
 
 #define PLUGIN_NAME    "Melee Damage Changer"
-#define PLUGIN_VERSION "1.2"
+#define PLUGIN_VERSION "1.3"
 #define PLUGIN_AUTHOR  "sakulmore"
 
 #define REQUIRED_FLAG ADMIN_LEVEL_H
 
 new g_szCfgPath[256];
-new g_pCvarDmgDefault;
 new g_PlayerDmg[33];
-
 new g_TargetForValue[33];
+
+enum PlayerDmgMode
+{
+    DMG_MODE_ORIGINAL = 0,
+    DMG_MODE_CUSTOM
+}
+
+new PlayerDmgMode:g_PlayerMode[33];
+
+stock bool:IsOrigKeyword(const arg[])
+{
+    if (!arg[0])
+        return false;
+
+    new lower[32];
+    copy(lower, charsmax(lower), arg);
+    strtolower(lower);
+
+    if (equali(lower, "orig") ||
+        equali(lower, "original") ||
+        equali(lower, "normal") ||
+        equali(lower, "default") ||
+        equali(lower, "def"))
+    {
+        return true;
+    }
+
+    return false;
+}
 
 public plugin_init()
 {
     register_plugin(PLUGIN_NAME, PLUGIN_VERSION, PLUGIN_AUTHOR);
 
-    g_pCvarDmgDefault = register_cvar("amx_changedmg", "8");
-
     register_clcmd("amx_changedmg", "Cmd_ClientSetDamage");
 
     register_clcmd("say /changedmg",      "Cmd_OpenChangeDmgMenu");
     register_clcmd("say_team /changedmg", "Cmd_OpenChangeDmgMenu");
-    register_clcmd("changedmg",          "Cmd_OpenChangeDmgMenu");
+    register_clcmd("changedmg",           "Cmd_OpenChangeDmgMenu");
 
     register_clcmd("Value", "Cmd_AdminEnteredValue");
 
@@ -47,6 +72,7 @@ public client_putinserver(id)
 public InitPlayerDmg(id)
 {
     g_PlayerDmg[id] = 0;
+    g_PlayerMode[id] = DMG_MODE_ORIGINAL;
     g_TargetForValue[id] = 0;
 
     if (!is_user_connected(id))
@@ -59,22 +85,30 @@ public InitPlayerDmg(id)
         return;
 
     new value = 0;
-    if (LoadPlayerValue(auth, "amx_changedmg", value) && value > 0)
+    if (LoadPlayerValue(auth, "amx_changedmg", value))
     {
-        g_PlayerDmg[id] = value;
+        if (value > 0)
+        {
+            g_PlayerDmg[id] = value;
+            g_PlayerMode[id] = DMG_MODE_CUSTOM;
+        }
+        else
+        {
+            g_PlayerDmg[id] = 0;
+            g_PlayerMode[id] = DMG_MODE_ORIGINAL;
+        }
     }
     else
     {
-        new def = get_pcvar_num(g_pCvarDmgDefault);
-        if (def <= 0) def = 8;
-        g_PlayerDmg[id] = def;
-        SaveOrUpdatePlayerValue(auth, "amx_changedmg", def);
+        g_PlayerDmg[id] = 0;
+        g_PlayerMode[id] = DMG_MODE_ORIGINAL;
     }
 }
 
 public client_disconnected(id)
 {
     g_PlayerDmg[id] = 0;
+    g_PlayerMode[id] = DMG_MODE_ORIGINAL;
     g_TargetForValue[id] = 0;
 }
 
@@ -86,14 +120,12 @@ public OnPlayerTakeDamage_Pre(victim, inflictor, attacker, Float:damage, damageb
     if (get_user_weapon(attacker) != CSW_KNIFE)
         return HAM_IGNORED;
 
-    new iDmg = g_PlayerDmg[attacker];
-    if (iDmg <= 0)
+    if (g_PlayerMode[attacker] != DMG_MODE_CUSTOM || g_PlayerDmg[attacker] <= 0)
     {
-        iDmg = get_pcvar_num(g_pCvarDmgDefault);
-        if (iDmg <= 0) iDmg = 8;
+        return HAM_IGNORED;
     }
 
-    SetHamParamFloat(4, float(iDmg));
+    SetHamParamFloat(4, float(g_PlayerDmg[attacker]));
     return HAM_HANDLED;
 }
 
@@ -122,21 +154,53 @@ public Cmd_ClientSetDamage(id)
 
     if (!arg[0])
     {
-        new def = get_pcvar_num(g_pCvarDmgDefault);
-        if (def <= 0) def = 8;
-        new cur = g_PlayerDmg[id] > 0 ? g_PlayerDmg[id] : def;
-        client_print(id, print_chat, "[DMG Changer] Your value: %d (default: %d). Change by: amx_changedmg <number>", cur, def);
+        if (g_PlayerMode[id] == DMG_MODE_CUSTOM && g_PlayerDmg[id] > 0)
+        {
+            client_print(id, print_chat,
+                "[DMG Changer] Your current knife damage: %d. Use: amx_changedmg <number> to change, or amx_changedmg orig to reset to original damage.",
+                g_PlayerDmg[id]);
+        }
+        else
+        {
+            client_print(id, print_chat,
+                "[DMG Changer] Your knife damage is set to original game damage. Use: amx_changedmg <number> to set custom damage.");
+        }
+        return PLUGIN_HANDLED;
+    }
+
+    if (IsOrigKeyword(arg))
+    {
+        g_PlayerMode[id] = DMG_MODE_ORIGINAL;
+        g_PlayerDmg[id] = 0;
+
+        SaveOrUpdatePlayerValue(auth, "amx_changedmg", 0);
+
+        client_print(id, print_chat, "[DMG Changer] Your knife damage has been reset to original game damage.");
         return PLUGIN_HANDLED;
     }
 
     new val = str_to_num(arg);
-    if (val <= 0)
+
+    if (val == 0)
     {
-        client_print(id, print_chat, "[DMG Changer] Invalid value. Enter a positive number (e.g., 8).");
+        g_PlayerMode[id] = DMG_MODE_ORIGINAL;
+        g_PlayerDmg[id] = 0;
+
+        SaveOrUpdatePlayerValue(auth, "amx_changedmg", 0);
+
+        client_print(id, print_chat, "[DMG Changer] Your knife damage has been reset to original game damage.");
+        return PLUGIN_HANDLED;
+    }
+
+    if (val < 0)
+    {
+        client_print(id, print_chat, "[DMG Changer] Invalid value. Enter a positive number (e.g., 8) or 'orig' to use original damage.");
         return PLUGIN_HANDLED;
     }
 
     g_PlayerDmg[id] = val;
+    g_PlayerMode[id] = DMG_MODE_CUSTOM;
+
     SaveOrUpdatePlayerValue(auth, "amx_changedmg", val);
 
     client_print(id, print_chat, "[DMG Changer] Set: %d. (saved for %s)", val, auth);
@@ -175,6 +239,10 @@ ShowChangeDmgMenu(id)
 {
     new menu = menu_create("Select Player", "ChangeDmgMenuHandler");
     menu_setprop(menu, MPROP_PERPAGE, 5);
+
+    menu_setprop(menu, MPROP_EXITNAME, "Close");
+    menu_setprop(menu, MPROP_BACKNAME, "Prev");
+    menu_setprop(menu, MPROP_NEXTNAME, "Next");
 
     new name[32], info[8];
 
@@ -268,18 +336,9 @@ public Cmd_AdminEnteredValue(id)
 
     if (!arg[0])
     {
-        client_print(id, print_chat, "[DMG Changer] Please enter a number (e.g., 8).");
+        client_print(id, print_chat, "[DMG Changer] Please enter a number (e.g., 8) or 'orig' for original damage.");
         return PLUGIN_HANDLED;
     }
-
-    new val = str_to_num(arg);
-    if (val <= 0)
-    {
-        client_print(id, print_chat, "[DMG Changer] Invalid value. Enter a positive number (e.g., 8).");
-        return PLUGIN_HANDLED;
-    }
-
-    g_PlayerDmg[target] = val;
 
     new auth[64];
     get_user_authid(target, auth, charsmax(auth));
@@ -287,6 +346,41 @@ public Cmd_AdminEnteredValue(id)
     new adminName[32], targetName[32];
     get_user_name(id, adminName, charsmax(adminName));
     get_user_name(target, targetName, charsmax(targetName));
+
+    if (IsOrigKeyword(arg))
+    {
+        g_PlayerMode[target] = DMG_MODE_ORIGINAL;
+        g_PlayerDmg[target] = 0;
+
+        SaveOrUpdatePlayerValue(auth, "amx_changedmg", 0);
+        client_print(0, print_chat, "[DMG Changer] %s reset %s's knife damage to original.", adminName, targetName);
+
+        g_TargetForValue[id] = 0;
+        return PLUGIN_HANDLED;
+    }
+
+    new val = str_to_num(arg);
+
+    if (val == 0)
+    {
+        g_PlayerMode[target] = DMG_MODE_ORIGINAL;
+        g_PlayerDmg[target] = 0;
+
+        SaveOrUpdatePlayerValue(auth, "amx_changedmg", 0);
+        client_print(0, print_chat, "[DMG Changer] %s reset %s's knife damage to original.", adminName, targetName);
+
+        g_TargetForValue[id] = 0;
+        return PLUGIN_HANDLED;
+    }
+
+    if (val < 0)
+    {
+        client_print(id, print_chat, "[DMG Changer] Invalid value. Enter a positive number (e.g., 8) or 'orig' for original damage.");
+        return PLUGIN_HANDLED;
+    }
+
+    g_PlayerDmg[target] = val;
+    g_PlayerMode[target] = DMG_MODE_CUSTOM;
 
     SaveOrUpdatePlayerValue(auth, "amx_changedmg", val);
     client_print(0, print_chat, "[DMG Changer] %s set %s's knife damage to %d.", adminName, targetName, val);
@@ -318,6 +412,16 @@ EnsureConfigFileExists()
         34, "amx_changedmg", 34,
         34, "<value>", 34,
         10
+    );
+    fputs(fp, line);
+
+    formatex(line, charsmax(line),
+        "; <value> > 0  = custom damage (e.g. 8)%c", 10
+    );
+    fputs(fp, line);
+
+    formatex(line, charsmax(line),
+        "; <value> <= 0 = original game damage%c", 10
     );
     fputs(fp, line);
 
