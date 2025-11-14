@@ -5,7 +5,7 @@
 #include <cstrike>
 
 #define PLUGIN_NAME    "Melee Damage Changer"
-#define PLUGIN_VERSION "1.3"
+#define PLUGIN_VERSION "1.4"
 #define PLUGIN_AUTHOR  "sakulmore"
 
 #define REQUIRED_FLAG ADMIN_LEVEL_H
@@ -41,6 +41,29 @@ stock bool:IsOrigKeyword(const arg[])
     }
 
     return false;
+}
+
+stock bool:IsNumeric(const arg[])
+{
+    if (!arg[0])
+        return false;
+
+    new i = 0;
+
+    if (arg[0] == '-' || arg[0] == '+')
+    {
+        if (!arg[1])
+            return false;
+        i = 1;
+    }
+
+    for (; arg[i]; i++)
+    {
+        if (!isdigit(arg[i]))
+            return false;
+    }
+
+    return true;
 }
 
 public plugin_init()
@@ -176,6 +199,12 @@ public Cmd_ClientSetDamage(id)
         SaveOrUpdatePlayerValue(auth, "amx_changedmg", 0);
 
         client_print(id, print_chat, "[DMG Changer] Your knife damage has been reset to original game damage.");
+        return PLUGIN_HANDLED;
+    }
+
+    if (!IsNumeric(arg))
+    {
+        client_print(id, print_chat, "[DMG Changer] Invalid value. Enter a positive number (e.g., 8) or 'orig' to use original damage.");
         return PLUGIN_HANDLED;
     }
 
@@ -356,6 +385,12 @@ public Cmd_AdminEnteredValue(id)
         client_print(0, print_chat, "[DMG Changer] %s reset %s's knife damage to original.", adminName, targetName);
 
         g_TargetForValue[id] = 0;
+        return PLUGIN_HANDLED;
+    }
+
+    if (!IsNumeric(arg))
+    {
+        client_print(id, print_chat, "[DMG Changer] Invalid value. Enter a positive number (e.g., 8) or 'orig' for original damage.");
         return PLUGIN_HANDLED;
     }
 
