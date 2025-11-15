@@ -13,10 +13,21 @@ This is officially my OWN very first plugin for CS 1.6. It is a "simple" plugin 
 `amx_changedmg <value>` (Default: 0 (= original damage from the game))
 - Valid arguments: Any number (1>), or words that set the damage to the original from the game: orig, def, default, original, normal
 
+`amx_changedmg_weap <value>` (Default: 0 (= original damage from the game))
+- Valid arguments: Any number (1>), or words that set the damage to the original from the game: orig, def, default, original, normal
+
+`changedmg` - Opens a menu for Melee (knife)
+
+`changedmgweap` - Opens a menu for Weapons (except knife)
+
 The command is protected by an Admin Flag. To change the Admin Flag, simply edit the line `#define REQUIRED_FLAG ADMIN_LEVEL_H` in the .sma file.
 
 # Commands
-`/changedmg` - Opens a menu where the admin can select a player. Then, it sets a new damage value for the chosen player, which is also automatically saved into the .cfg file.
+`/changedmg` - Opens a menu for Melee (knife) where the admin can select a player. Then, it sets a new damage value for the chosen player, which is also automatically saved into the .cfg file.
+- Valid arguments: Any number (1>), or words that set the damage to the original from the game: orig, def, default, original, normal
+- Required Admin flag `ADMIN_LEVEL_H`
+
+`/changedmgweap` - Opens a menu for Weapons (except knife) where the admin can select a player. Then, it sets a new damage value for the chosen player, which is also automatically saved into the .cfg file.
 - Valid arguments: Any number (1>), or words that set the damage to the original from the game: orig, def, default, original, normal
 - Required Admin flag `ADMIN_LEVEL_H`
 
