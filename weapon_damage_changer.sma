@@ -5,14 +5,16 @@
 #include <cstrike>
 
 #define PLUGIN_NAME    "Weapon Damage Changer"
-#define PLUGIN_VERSION "1.0"
+#define PLUGIN_VERSION "1.1"
 #define PLUGIN_AUTHOR  "sakulmore"
 
-#define REQUIRED_FLAG ADMIN_LEVEL_H
-
 new g_szCfgPath[256];
+new g_szAdminFlagCfg[256];
+
 new g_PlayerDmg[33];
 new g_TargetForValue[33];
+
+new g_RequiredFlag = ADMIN_LEVEL_H;
 
 enum PlayerDmgMode
 {
@@ -21,6 +23,66 @@ enum PlayerDmgMode
 }
 
 new PlayerDmgMode:g_PlayerMode[33];
+
+new const g_AdminFlagNames[][] =
+{
+    "ADMIN_ALL",
+    "ADMIN_IMMUNITY",
+    "ADMIN_RESERVATION",
+    "ADMIN_KICK",
+    "ADMIN_BAN",
+    "ADMIN_SLAY",
+    "ADMIN_MAP",
+    "ADMIN_CVAR",
+    "ADMIN_CFG",
+    "ADMIN_CHAT",
+    "ADMIN_VOTE",
+    "ADMIN_PASSWORD",
+    "ADMIN_RCON",
+    "ADMIN_LEVEL_A",
+    "ADMIN_LEVEL_B",
+    "ADMIN_LEVEL_C",
+    "ADMIN_LEVEL_D",
+    "ADMIN_LEVEL_E",
+    "ADMIN_LEVEL_F",
+    "ADMIN_LEVEL_G",
+    "ADMIN_LEVEL_H",
+    "ADMIN_MENU",
+    "ADMIN_BAN_TEMP",
+    "ADMIN_ADMIN",
+    "ADMIN_USER"
+};
+
+new const g_AdminFlagBits[] =
+{
+    ADMIN_ALL,
+    ADMIN_IMMUNITY,
+    ADMIN_RESERVATION,
+    ADMIN_KICK,
+    ADMIN_BAN,
+    ADMIN_SLAY,
+    ADMIN_MAP,
+    ADMIN_CVAR,
+    ADMIN_CFG,
+    ADMIN_CHAT,
+    ADMIN_VOTE,
+    ADMIN_PASSWORD,
+    ADMIN_RCON,
+    ADMIN_LEVEL_A,
+    ADMIN_LEVEL_B,
+    ADMIN_LEVEL_C,
+    ADMIN_LEVEL_D,
+    ADMIN_LEVEL_E,
+    ADMIN_LEVEL_F,
+    ADMIN_LEVEL_G,
+    ADMIN_LEVEL_H,
+    ADMIN_MENU,
+    ADMIN_BAN_TEMP,
+    ADMIN_ADMIN,
+    ADMIN_USER
+};
+
+#define ADMIN_FLAG_COUNT (sizeof g_AdminFlagBits)
 
 stock bool:IsOrigKeyword(const arg[])
 {
@@ -66,6 +128,105 @@ stock bool:IsNumeric(const arg[])
     return true;
 }
 
+stock FindAdminFlagIndexByName(const name[])
+{
+    for (new i = 0; i < ADMIN_FLAG_COUNT; i++)
+    {
+        if (equali(name, g_AdminFlagNames[i]))
+            return i;
+    }
+    return -1;
+}
+
+stock FindAdminFlagIndexByBit(bit)
+{
+    for (new i = 0; i < ADMIN_FLAG_COUNT; i++)
+    {
+        if (g_AdminFlagBits[i] == bit)
+            return i;
+    }
+    return -1;
+}
+
+EnsureAdminFlagCfgExists()
+{
+    if (file_exists(g_szAdminFlagCfg))
+        return;
+
+    g_RequiredFlag = ADMIN_LEVEL_H;
+
+    SaveAdminFlagCfg();
+}
+
+SaveAdminFlagCfg()
+{
+    new fp = fopen(g_szAdminFlagCfg, "wt");
+    if (!fp)
+    {
+        log_amx("[DMG Changer Weapon] Can't write admin flag cfg: %s", g_szAdminFlagCfg);
+        return;
+    }
+
+    new line[256];
+
+    formatex(line, charsmax(line), "; WDCH admin flag config%c", 10);
+    fputs(fp, line);
+
+    formatex(line, charsmax(line), "; Selectable flags via /changedmgweapsf%c", 10);
+    fputs(fp, line);
+
+    new idx = FindAdminFlagIndexByBit(g_RequiredFlag);
+    new flagName[64];
+
+    if (idx != -1)
+    {
+        copy(flagName, charsmax(flagName), g_AdminFlagNames[idx]);
+    }
+    else
+    {
+        copy(flagName, charsmax(flagName), "ADMIN_LEVEL_H");
+    }
+
+    formatex(line, charsmax(line), "%s%c", flagName, 10);
+    fputs(fp, line);
+
+    fclose(fp);
+}
+
+LoadAdminFlagCfg()
+{
+    g_RequiredFlag = ADMIN_LEVEL_H;
+
+    new fp = fopen(g_szAdminFlagCfg, "rt");
+    if (!fp)
+    {
+        SaveAdminFlagCfg();
+        return;
+    }
+
+    new line[256];
+    while (!feof(fp))
+    {
+        fgets(fp, line, charsmax(line));
+        trim(line);
+        if (!line[0] || line[0] == ';')
+            continue;
+
+        new idx = FindAdminFlagIndexByName(line);
+        if (idx != -1)
+        {
+            g_RequiredFlag = g_AdminFlagBits[idx];
+        }
+        else
+        {
+            log_amx("[DMG Changer Weapon] Unknown admin flag in cfg: %s", line);
+        }
+        break;
+    }
+
+    fclose(fp);
+}
+
 public plugin_init()
 {
     register_plugin(PLUGIN_NAME, PLUGIN_VERSION, PLUGIN_AUTHOR);
@@ -78,11 +239,17 @@ public plugin_init()
 
     register_clcmd("ValueWeap", "Cmd_AdminEnteredValueAll");
 
+    register_clcmd("say /changedmgweapsf",      "Cmd_OpenAdminFlagMenuWeap");
+    register_clcmd("say_team /changedmgweapsf", "Cmd_OpenAdminFlagMenuWeap");
+
     new datadir[128];
     get_datadir(datadir, charsmax(datadir));
-    formatex(g_szCfgPath, charsmax(g_szCfgPath), "%s/weapon_dmg_changer.cfg", datadir);
+    formatex(g_szCfgPath,      charsmax(g_szCfgPath),      "%s/weapon_dmg_changer.cfg", datadir);
+    formatex(g_szAdminFlagCfg, charsmax(g_szAdminFlagCfg), "%s/wdch_adminflag.cfg",     datadir);
 
     EnsureConfigFileExists();
+    EnsureAdminFlagCfgExists();
+    LoadAdminFlagCfg();
 
     RegisterHam(Ham_TakeDamage, "player", "OnPlayerTakeDamage_Pre_All", 0);
 }
@@ -157,7 +324,7 @@ public Cmd_ClientSetDamageAll(id)
     if (!is_user_connected(id))
         return PLUGIN_HANDLED;
 
-    if ( !(get_user_flags(id) & REQUIRED_FLAG) )
+    if ( !(get_user_flags(id) & g_RequiredFlag) )
     {
         client_print(id, print_chat, "[DMG Changer Weapon] You don't have access to use this!");
         return PLUGIN_HANDLED;
@@ -241,7 +408,7 @@ public Cmd_OpenChangeDmgMenuAll(id)
     if (!is_user_connected(id))
         return PLUGIN_HANDLED;
 
-    if ( !(get_user_flags(id) & REQUIRED_FLAG) )
+    if ( !(get_user_flags(id) & g_RequiredFlag) )
     {
         client_print(id, print_chat, "[DMG Changer Weapon] You don't have access to use this!");
         return PLUGIN_HANDLED;
@@ -339,7 +506,7 @@ public Cmd_AdminEnteredValueAll(id)
     if (!is_user_connected(id))
         return PLUGIN_HANDLED;
 
-    if ( !(get_user_flags(id) & REQUIRED_FLAG) )
+    if ( !(get_user_flags(id) & g_RequiredFlag) )
     {
         client_print(id, print_chat, "[DMG Changer Weapon] You don't have access to use this!");
         return PLUGIN_HANDLED;
@@ -422,6 +589,76 @@ public Cmd_AdminEnteredValueAll(id)
 
     g_TargetForValue[id] = 0;
 
+    return PLUGIN_HANDLED;
+}
+
+public Cmd_OpenAdminFlagMenuWeap(id)
+{
+    if (!is_user_connected(id))
+        return PLUGIN_HANDLED;
+
+    if ( !(get_user_flags(id) & g_RequiredFlag) )
+    {
+        client_print(id, print_chat, "[DMG Changer Weapon] You don't have access to change admin flag!");
+        return PLUGIN_HANDLED;
+    }
+
+    ShowAdminFlagMenuWeap(id);
+    return PLUGIN_HANDLED;
+}
+
+ShowAdminFlagMenuWeap(id)
+{
+    new menu = menu_create("Select Admin Flag (Weapon)", "AdminFlagMenuHandlerWeap");
+    menu_setprop(menu, MPROP_PERPAGE, 7);
+    menu_setprop(menu, MPROP_EXITNAME, "Close");
+    menu_setprop(menu, MPROP_BACKNAME, "Prev");
+    menu_setprop(menu, MPROP_NEXTNAME, "Next");
+
+    new itemName[64], info[8];
+
+    for (new i = 0; i < ADMIN_FLAG_COUNT; i++)
+    {
+        if (g_RequiredFlag == g_AdminFlagBits[i])
+        {
+            formatex(itemName, charsmax(itemName), "[*] %s", g_AdminFlagNames[i]);
+        }
+        else
+        {
+            formatex(itemName, charsmax(itemName), "%s", g_AdminFlagNames[i]);
+        }
+
+        num_to_str(i, info, charsmax(info));
+        menu_additem(menu, itemName, info);
+    }
+
+    menu_display(id, menu, 0);
+}
+
+public AdminFlagMenuHandlerWeap(id, menu, item)
+{
+    if (item == MENU_EXIT)
+    {
+        menu_destroy(menu);
+        return PLUGIN_HANDLED;
+    }
+
+    new info[8], name[64], access, callback;
+    menu_item_getinfo(menu, item, access, info, charsmax(info), name, charsmax(name), callback);
+
+    new idx = str_to_num(info);
+    if (idx < 0 || idx >= ADMIN_FLAG_COUNT)
+    {
+        menu_destroy(menu);
+        return PLUGIN_HANDLED;
+    }
+
+    g_RequiredFlag = g_AdminFlagBits[idx];
+    SaveAdminFlagCfg();
+
+    client_print(id, print_chat, "[DMG Changer Weapon] Admin flag set to: %s.", g_AdminFlagNames[idx]);
+
+    menu_destroy(menu);
     return PLUGIN_HANDLED;
 }
 
