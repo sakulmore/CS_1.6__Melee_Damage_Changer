@@ -31,6 +31,8 @@ The command is protected by an Admin Flag. To change the Admin Flag, simply edit
 - Valid arguments: Any number (1>), or words that set the damage to the original from the game: orig, def, default, original, normal
 - Required Admin flag `ADMIN_LEVEL_H`
 
+`/changedmgsf` and `/changedmgweapsf` - Opens a menu where you (the admin) can set under which admin flag the commands should work (in simple terms: you can change the admin flag dynamically).
+
 # Notes
 - After installing the plugin on the server, a new .cfg file `melee_dmg_changer.cfg` will be created in the `/cstrike/addons/amxmodx/data` folder. Your SteamID, the name of the cvar, and its value will be written here. The values are saved, so it is not necessary to enter the command again each time.
 - If you wish to change the default value (8), simply open the .sma script and edit this line: `g_pCvarDmgDefault = register_cvar("amx_changedmg", "8");` specifically the ending number, which defines the default value.
