@@ -4,8 +4,8 @@
 #include <fun>
 #include <cstrike>
 
-#define PLUGIN_NAME    "Melee Damage Changer"
-#define PLUGIN_VERSION "1.4"
+#define PLUGIN_NAME    "Weapon Damage Changer"
+#define PLUGIN_VERSION "1.0"
 #define PLUGIN_AUTHOR  "sakulmore"
 
 #define REQUIRED_FLAG ADMIN_LEVEL_H
@@ -70,29 +70,29 @@ public plugin_init()
 {
     register_plugin(PLUGIN_NAME, PLUGIN_VERSION, PLUGIN_AUTHOR);
 
-    register_clcmd("amx_changedmg", "Cmd_ClientSetDamage");
+    register_clcmd("amx_changedmg_weap", "Cmd_ClientSetDamageAll");
 
-    register_clcmd("say /changedmg",      "Cmd_OpenChangeDmgMenu");
-    register_clcmd("say_team /changedmg", "Cmd_OpenChangeDmgMenu");
-    register_clcmd("changedmg",           "Cmd_OpenChangeDmgMenu");
+    register_clcmd("say /changedmgweap",      "Cmd_OpenChangeDmgMenuAll");
+    register_clcmd("say_team /changedmgweap", "Cmd_OpenChangeDmgMenuAll");
+    register_clcmd("changedmgweap",           "Cmd_OpenChangeDmgMenuAll");
 
-    register_clcmd("Value", "Cmd_AdminEnteredValue");
+    register_clcmd("ValueWeap", "Cmd_AdminEnteredValueAll");
 
     new datadir[128];
     get_datadir(datadir, charsmax(datadir));
-    formatex(g_szCfgPath, charsmax(g_szCfgPath), "%s/melee_dmg_changer.cfg", datadir);
+    formatex(g_szCfgPath, charsmax(g_szCfgPath), "%s/weapon_dmg_changer.cfg", datadir);
 
     EnsureConfigFileExists();
 
-    RegisterHam(Ham_TakeDamage, "player", "OnPlayerTakeDamage_Pre", 0);
+    RegisterHam(Ham_TakeDamage, "player", "OnPlayerTakeDamage_Pre_All", 0);
 }
 
 public client_putinserver(id)
 {
-    set_task(0.1, "InitPlayerDmg", id);
+    set_task(0.1, "InitPlayerDmgAll", id);
 }
 
-public InitPlayerDmg(id)
+public InitPlayerDmgAll(id)
 {
     g_PlayerDmg[id] = 0;
     g_PlayerMode[id] = DMG_MODE_ORIGINAL;
@@ -108,7 +108,7 @@ public InitPlayerDmg(id)
         return;
 
     new value = 0;
-    if (LoadPlayerValue(auth, "amx_changedmg", value))
+    if (LoadPlayerValue(auth, "amx_changedmg_weap", value))
     {
         if (value > 0)
         {
@@ -135,12 +135,12 @@ public client_disconnected(id)
     g_TargetForValue[id] = 0;
 }
 
-public OnPlayerTakeDamage_Pre(victim, inflictor, attacker, Float:damage, damagebits)
+public OnPlayerTakeDamage_Pre_All(victim, inflictor, attacker, Float:damage, damagebits)
 {
     if (attacker <= 0 || attacker > 32 || attacker == victim || !is_user_connected(attacker))
         return HAM_IGNORED;
 
-    if (get_user_weapon(attacker) != CSW_KNIFE)
+    if (get_user_weapon(attacker) == CSW_KNIFE)
         return HAM_IGNORED;
 
     if (g_PlayerMode[attacker] != DMG_MODE_CUSTOM || g_PlayerDmg[attacker] <= 0)
@@ -152,14 +152,14 @@ public OnPlayerTakeDamage_Pre(victim, inflictor, attacker, Float:damage, damageb
     return HAM_HANDLED;
 }
 
-public Cmd_ClientSetDamage(id)
+public Cmd_ClientSetDamageAll(id)
 {
     if (!is_user_connected(id))
         return PLUGIN_HANDLED;
 
     if ( !(get_user_flags(id) & REQUIRED_FLAG) )
     {
-        client_print(id, print_chat, "[DMG Changer Melee] You don't have access to use this!");
+        client_print(id, print_chat, "[DMG Changer Weapon] You don't have access to use this!");
         return PLUGIN_HANDLED;
     }
 
@@ -171,7 +171,7 @@ public Cmd_ClientSetDamage(id)
 
     if (!auth[0] || equali(auth, "BOT") || equali(auth, "STEAM_ID_LAN"))
     {
-        client_print(id, print_chat, "[DMG Changer Melee] This command isn't available for BOT/STEAM_ID_LAN.");
+        client_print(id, print_chat, "[DMG Changer Weapon] This command isn't available for BOT/STEAM_ID_LAN.");
         return PLUGIN_HANDLED;
     }
 
@@ -180,13 +180,13 @@ public Cmd_ClientSetDamage(id)
         if (g_PlayerMode[id] == DMG_MODE_CUSTOM && g_PlayerDmg[id] > 0)
         {
             client_print(id, print_chat,
-                "[DMG Changer Melee] Your current knife damage: %d. Use: amx_changedmg <number> to change, or amx_changedmg orig to reset to original damage.",
+                "[DMG Changer Weapon] Your current weapon damage: %d. Use: amx_changedmg_weap <number> to change, or amx_changedmg_weap orig to reset to original damage.",
                 g_PlayerDmg[id]);
         }
         else
         {
             client_print(id, print_chat,
-                "[DMG Changer Melee] Your knife damage is set to original game damage. Use: amx_changedmg <number> to set custom damage.");
+                "[DMG Changer Weapon] Your weapon damage is set to original game damage. Use: amx_changedmg_weap <number> to set custom damage.");
         }
         return PLUGIN_HANDLED;
     }
@@ -196,15 +196,15 @@ public Cmd_ClientSetDamage(id)
         g_PlayerMode[id] = DMG_MODE_ORIGINAL;
         g_PlayerDmg[id] = 0;
 
-        SaveOrUpdatePlayerValue(auth, "amx_changedmg", 0);
+        SaveOrUpdatePlayerValue(auth, "amx_changedmg_weap", 0);
 
-        client_print(id, print_chat, "[DMG Changer Melee] Your knife damage has been reset to original game damage.");
+        client_print(id, print_chat, "[DMG Changer Weapon] Your weapon damage has been reset to original game damage.");
         return PLUGIN_HANDLED;
     }
 
     if (!IsNumeric(arg))
     {
-        client_print(id, print_chat, "[DMG Changer Melee] Invalid value. Enter a positive number (e.g., 8) or 'orig' to use original damage.");
+        client_print(id, print_chat, "[DMG Changer Weapon] Invalid value. Enter a positive number (e.g., 8) or 'orig' to use original damage.");
         return PLUGIN_HANDLED;
     }
 
@@ -215,39 +215,39 @@ public Cmd_ClientSetDamage(id)
         g_PlayerMode[id] = DMG_MODE_ORIGINAL;
         g_PlayerDmg[id] = 0;
 
-        SaveOrUpdatePlayerValue(auth, "amx_changedmg", 0);
+        SaveOrUpdatePlayerValue(auth, "amx_changedmg_weap", 0);
 
-        client_print(id, print_chat, "[DMG Changer Melee] Your knife damage has been reset to original game damage.");
+        client_print(id, print_chat, "[DMG Changer Weapon] Your weapon damage has been reset to original game damage.");
         return PLUGIN_HANDLED;
     }
 
     if (val < 0)
     {
-        client_print(id, print_chat, "[DMG Changer Melee] Invalid value. Enter a positive number (e.g., 8) or 'orig' to use original damage.");
+        client_print(id, print_chat, "[DMG Changer Weapon] Invalid value. Enter a positive number (e.g., 8) or 'orig' to use original damage.");
         return PLUGIN_HANDLED;
     }
 
     g_PlayerDmg[id] = val;
     g_PlayerMode[id] = DMG_MODE_CUSTOM;
 
-    SaveOrUpdatePlayerValue(auth, "amx_changedmg", val);
+    SaveOrUpdatePlayerValue(auth, "amx_changedmg_weap", val);
 
-    client_print(id, print_chat, "[DMG Changer Melee] Set: %d. (saved for %s)", val, auth);
+    client_print(id, print_chat, "[DMG Changer Weapon] Set: %d. (saved for %s)", val, auth);
     return PLUGIN_HANDLED;
 }
 
-public Cmd_OpenChangeDmgMenu(id)
+public Cmd_OpenChangeDmgMenuAll(id)
 {
     if (!is_user_connected(id))
         return PLUGIN_HANDLED;
 
     if ( !(get_user_flags(id) & REQUIRED_FLAG) )
     {
-        client_print(id, print_chat, "[DMG Changer Melee] You don't have access to use this!");
+        client_print(id, print_chat, "[DMG Changer Weapon] You don't have access to use this!");
         return PLUGIN_HANDLED;
     }
 
-    ShowChangeDmgMenu(id);
+    ShowChangeDmgMenuAll(id);
     return PLUGIN_HANDLED;
 }
 
@@ -264,9 +264,9 @@ stock bool:IsRealSteamClient(id)
     return true;
 }
 
-ShowChangeDmgMenu(id)
+ShowChangeDmgMenuAll(id)
 {
-    new menu = menu_create("Select Player (Melee)", "ChangeDmgMenuHandler");
+    new menu = menu_create("Select Player (Weapon)", "ChangeDmgMenuHandlerAll");
     menu_setprop(menu, MPROP_PERPAGE, 7);
 
     menu_setprop(menu, MPROP_EXITNAME, "Close");
@@ -291,7 +291,7 @@ ShowChangeDmgMenu(id)
 
     if (menu_items(menu) == 0)
     {
-        client_print(id, print_chat, "[DMG Changer Melee] No eligible players online (bots and STEAM_ID_LAN are excluded).");
+        client_print(id, print_chat, "[DMG Changer Weapon] No eligible players online (bots and STEAM_ID_LAN are excluded).");
         menu_destroy(menu);
         return;
     }
@@ -299,7 +299,7 @@ ShowChangeDmgMenu(id)
     menu_display(id, menu, 0);
 }
 
-public ChangeDmgMenuHandler(id, menu, item)
+public ChangeDmgMenuHandlerAll(id, menu, item)
 {
     if (item == MENU_EXIT)
     {
@@ -314,48 +314,48 @@ public ChangeDmgMenuHandler(id, menu, item)
 
     if (!is_user_connected(target))
     {
-        client_print(id, print_chat, "[DMG Changer Melee] Target is no longer connected.");
+        client_print(id, print_chat, "[DMG Changer Weapon] Target is no longer connected.");
         menu_destroy(menu);
         return PLUGIN_HANDLED;
     }
 
     if (!IsRealSteamClient(target))
     {
-        client_print(id, print_chat, "[DMG Changer Melee] You cannot set damage for BOT/STEAM_ID_LAN players.");
+        client_print(id, print_chat, "[DMG Changer Weapon] You cannot set damage for BOT/STEAM_ID_LAN players.");
         menu_destroy(menu);
         return PLUGIN_HANDLED;
     }
 
     g_TargetForValue[id] = target;
 
-    client_cmd(id, "messagemode Value");
+    client_cmd(id, "messagemode ValueWeap");
 
     menu_destroy(menu);
     return PLUGIN_HANDLED;
 }
 
-public Cmd_AdminEnteredValue(id)
+public Cmd_AdminEnteredValueAll(id)
 {
     if (!is_user_connected(id))
         return PLUGIN_HANDLED;
 
     if ( !(get_user_flags(id) & REQUIRED_FLAG) )
     {
-        client_print(id, print_chat, "[DMG Changer Melee] You don't have access to use this!");
+        client_print(id, print_chat, "[DMG Changer Weapon] You don't have access to use this!");
         return PLUGIN_HANDLED;
     }
 
     new target = g_TargetForValue[id];
     if (target <= 0 || target > 32 || !is_user_connected(target))
     {
-        client_print(id, print_chat, "[DMG Changer Melee] No target selected or target disconnected.");
+        client_print(id, print_chat, "[DMG Changer Weapon] No target selected or target disconnected.");
         g_TargetForValue[id] = 0;
         return PLUGIN_HANDLED;
     }
 
     if (!IsRealSteamClient(target))
     {
-        client_print(id, print_chat, "[DMG Changer Melee] You cannot set damage for BOT/STEAM_ID_LAN players.");
+        client_print(id, print_chat, "[DMG Changer Weapon] You cannot set damage for BOT/STEAM_ID_LAN players.");
         g_TargetForValue[id] = 0;
         return PLUGIN_HANDLED;
     }
@@ -365,7 +365,7 @@ public Cmd_AdminEnteredValue(id)
 
     if (!arg[0])
     {
-        client_print(id, print_chat, "[DMG Changer Melee] Please enter a number (e.g., 8) or 'orig' for original damage.");
+        client_print(id, print_chat, "[DMG Changer Weapon] Please enter a number (e.g., 8) or 'orig' for original damage.");
         return PLUGIN_HANDLED;
     }
 
@@ -381,8 +381,8 @@ public Cmd_AdminEnteredValue(id)
         g_PlayerMode[target] = DMG_MODE_ORIGINAL;
         g_PlayerDmg[target] = 0;
 
-        SaveOrUpdatePlayerValue(auth, "amx_changedmg", 0);
-        client_print(0, print_chat, "[DMG Changer Melee] %s reset %s's knife damage to original.", adminName, targetName);
+        SaveOrUpdatePlayerValue(auth, "amx_changedmg_weap", 0);
+        client_print(0, print_chat, "[DMG Changer Weapon] %s reset %s's weapon damage to original.", adminName, targetName);
 
         g_TargetForValue[id] = 0;
         return PLUGIN_HANDLED;
@@ -390,7 +390,7 @@ public Cmd_AdminEnteredValue(id)
 
     if (!IsNumeric(arg))
     {
-        client_print(id, print_chat, "[DMG Changer Melee] Invalid value. Enter a positive number (e.g., 8) or 'orig' for original damage.");
+        client_print(id, print_chat, "[DMG Changer Weapon] Invalid value. Enter a positive number (e.g., 8) or 'orig' for original damage.");
         return PLUGIN_HANDLED;
     }
 
@@ -401,8 +401,8 @@ public Cmd_AdminEnteredValue(id)
         g_PlayerMode[target] = DMG_MODE_ORIGINAL;
         g_PlayerDmg[target] = 0;
 
-        SaveOrUpdatePlayerValue(auth, "amx_changedmg", 0);
-        client_print(0, print_chat, "[DMG Changer Melee] %s reset %s's knife damage to original.", adminName, targetName);
+        SaveOrUpdatePlayerValue(auth, "amx_changedmg_weap", 0);
+        client_print(0, print_chat, "[DMG Changer Weapon] %s reset %s's weapon damage to original.", adminName, targetName);
 
         g_TargetForValue[id] = 0;
         return PLUGIN_HANDLED;
@@ -410,15 +410,15 @@ public Cmd_AdminEnteredValue(id)
 
     if (val < 0)
     {
-        client_print(id, print_chat, "[DMG Changer Melee] Invalid value. Enter a positive number (e.g., 8) or 'orig' for original damage.");
+        client_print(id, print_chat, "[DMG Changer Weapon] Invalid value. Enter a positive number (e.g., 8) or 'orig' for original damage.");
         return PLUGIN_HANDLED;
     }
 
     g_PlayerDmg[target] = val;
     g_PlayerMode[target] = DMG_MODE_CUSTOM;
 
-    SaveOrUpdatePlayerValue(auth, "amx_changedmg", val);
-    client_print(0, print_chat, "[DMG Changer Melee] %s set %s's knife damage to %d.", adminName, targetName, val);
+    SaveOrUpdatePlayerValue(auth, "amx_changedmg_weap", val);
+    client_print(0, print_chat, "[DMG Changer Weapon] %s set %s's weapon damage to %d.", adminName, targetName, val);
 
     g_TargetForValue[id] = 0;
 
@@ -433,18 +433,18 @@ EnsureConfigFileExists()
     new fp = fopen(g_szCfgPath, "wt");
     if (!fp)
     {
-        log_amx("[DMG Changer Melee] Can't create file: %s", g_szCfgPath);
+        log_amx("[DMG Changer Weapon] Can't create file: %s", g_szCfgPath);
         return;
     }
 
     new line[256];
-    formatex(line, charsmax(line), "; Per-player melee damage%c", 10);
+    formatex(line, charsmax(line), "; Per-player weapon damage%c", 10);
     fputs(fp, line);
 
     formatex(line, charsmax(line),
         "; Syntax: %c%s%c %c%s%c %c%s%c%c",
         34, "<SteamID>", 34,
-        34, "amx_changedmg", 34,
+        34, "amx_changedmg_weap", 34,
         34, "<value>", 34,
         10
     );
@@ -463,7 +463,7 @@ EnsureConfigFileExists()
     formatex(line, charsmax(line),
         "; Example: %c%s%c %c%s%c %c%d%c%c",
         34, "STEAM_0:1:23456789", 34,
-        34, "amx_changedmg", 34,
+        34, "amx_changedmg_weap", 34,
         34, 8, 34,
         10
     );
@@ -512,7 +512,7 @@ SaveOrUpdatePlayerValue(const steamid[], const key[], value)
     if (!fpw)
     {
         if (fpr) fclose(fpr);
-        log_amx("[DMG Changer Melee] Can't write to: %s", tmpPath);
+        log_amx("[DMG Changer Weapon] Can't write to: %s", tmpPath);
         return;
     }
 
@@ -551,12 +551,12 @@ SaveOrUpdatePlayerValue(const steamid[], const key[], value)
     }
     else
     {
-        formatex(line, charsmax(line), "; Per-player melee damage%c", 10);
+        formatex(line, charsmax(line), "; Per-player weapon damage%c", 10);
         fputs(fpw, line);
         formatex(line, charsmax(line),
             "; Syntax: %c%s%c %c%s%c %c%s%c%c",
             34, "<SteamID>", 34,
-            34, "amx_changedmg", 34,
+            34, "amx_changedmg_weap", 34,
             34, "<value>", 34,
             10
         );
@@ -564,7 +564,7 @@ SaveOrUpdatePlayerValue(const steamid[], const key[], value)
         formatex(line, charsmax(line),
             "; Example: %c%s%c %c%s%c %c%d%c%c",
             34, "STEAM_0:1:23456789", 34,
-            34, "amx_changedmg", 34,
+            34, "amx_changedmg_weap", 34,
             34, 8, 34,
             10
         );
