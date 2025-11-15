@@ -25,13 +25,14 @@ The command is protected by an Admin Flag. To change the Admin Flag, simply edit
 # Commands
 `/changedmg` - Opens a menu for Melee (knife) where the admin can select a player. Then, it sets a new damage value for the chosen player, which is also automatically saved into the .cfg file.
 - Valid arguments: Any number (1>), or words that set the damage to the original from the game: orig, def, default, original, normal
-- Required Admin flag `ADMIN_LEVEL_H`
+- Required Admin flag (Default) `ADMIN_LEVEL_H`
 
 `/changedmgweap` - Opens a menu for Weapons (except knife) where the admin can select a player. Then, it sets a new damage value for the chosen player, which is also automatically saved into the .cfg file.
 - Valid arguments: Any number (1>), or words that set the damage to the original from the game: orig, def, default, original, normal
-- Required Admin flag `ADMIN_LEVEL_H`
+- Required Admin flag (Default) `ADMIN_LEVEL_H`
 
 `/changedmgsf` and `/changedmgweapsf` - Opens a menu where you (the admin) can set under which admin flag the commands should work (in simple terms: you can change the admin flag dynamically).
+- Default: `ADMIN_LEVEL_H`
 
 # Notes
 - After installing the plugin on the server, a new .cfg file `melee_dmg_changer.cfg` will be created in the `/cstrike/addons/amxmodx/data` folder. Your SteamID, the name of the cvar, and its value will be written here. The values are saved, so it is not necessary to enter the command again each time.
@@ -42,3 +43,4 @@ https://youtu.be/tjFB44Qvx3I
 
 # Support
 If you having any issues please feel free to write your issue to the issue section :) .
+
